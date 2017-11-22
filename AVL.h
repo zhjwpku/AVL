@@ -31,5 +31,6 @@ AVL* Insert(AVL* root, KEY_TYPE key);
 AVL* Delete(AVL* root, KEY_TYPE key);
 void InOrder(AVL* root);
 
+void printBST(AVL* root, int level, int indentSpace);
 
 #endif

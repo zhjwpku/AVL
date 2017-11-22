@@ -3,7 +3,15 @@
  */
 
 #include "AVL.h"
-#include<iostream>
+#include <stdio.h>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <deque>
+#include <cmath>
+#include <iomanip>
+
+using namespace std;
 
 AVL* New_Node(KEY_TYPE key, AVL* lchild, AVL* rchild, int height)
 {
@@ -15,93 +23,90 @@ AVL* New_Node(KEY_TYPE key, AVL* lchild, AVL* rchild, int height)
 	return p_avl;
 }
 
-inline int getHeight(AVL* node)
-{
+inline int getHeight(AVL* node) {
 	return (node==NULL)? -1:node->height;
 }
 
-inline int max(int a, int b)
-{
+inline int max(int a, int b) {
 	return a>b?a:b;
 }
 
-/* RR(Y rotates to the right):
+/* LL(t23 rotates to the right):
 
-        k2                   k1
+        X                    Z
        /  \                 /  \
-      k1   Z     ==>       X   k2
-     / \                      /  \
-    X   Y                    Y    Z
+      Z   t1     ==>       t3   X
+     / \                       /  \
+    t4  t23                  t23  t1
 */
 /*
  Return which the root pointer(at a higher level) should point to
  */
-AVL* RR_Rotate(AVL* k2)
+AVL* LL_Rotate(AVL* X)
 {
-	AVL* k1 = k2->lchild;
-	k2->lchild = k1->rchild;
-	k1->rchild = k2;
-	k2->height = max(getHeight(k2->lchild), getHeight(k2->rchild)) + 1;
-	k1->height = max(getHeight(k1->lchild), k2->height) + 1;
-	return k1;
+	AVL* Z = X->lchild;
+	X->lchild = Z->rchild;
+	Z->rchild = X;
+	X->height = max(getHeight(X->lchild), getHeight(X->rchild)) + 1;
+	Z->height = max(getHeight(Z->lchild), X->height) + 1;
+	return Z;
 }
 
-/* LL(Y rotates to the left):
+/* RR(t23 rotates to the left):
 
-        k2                       k1
+         X                       Z
        /  \                     /  \
-      X    k1         ==>      k2   Z
+      t1    Z         ==>      X   t4
           /  \                /  \
-         Y    Z              X    Y
+         t23  t4             t1   t23
  */
-AVL* LL_Rotate(AVL* k2)
+AVL* RR_Rotate(AVL* X)
 {
-	AVL* k1 = k2->rchild;
-	k2->rchild = k1->lchild;
-	k1->lchild = k2;
-	k2->height = max(getHeight(k2->lchild), getHeight(k2->rchild)) + 1;
-	k1->height = max(getHeight(k1->rchild), k2->height) + 1;
-	return k1;
+	AVL* Z = X->rchild;
+	X->rchild = Z->lchild;
+	Z->lchild = X;
+	X->height = max(getHeight(X->lchild), getHeight(X->rchild)) + 1;
+	Z->height = max(getHeight(Z->rchild), X->height) + 1;
+	return Z;
 }
 
 
+/* LR(t2 rotates to the left, then t3 rotates to the right):
 
-/* LR(B rotates to the left, then C rotates to the right):
-
-      k3                         k3                       k2
+      X                          X                        Y
      /  \                       /  \                     /  \
-    k1   D                     k2   D                   k1   k3
+    Z    t4                    Y   t4                   Z    X
    /  \         ==>           /  \        ==>          / \   / \
-  A    k2                    k1   C                   A  B  C   D
+  t1    Y                    Z    t3                  t1 t2 t3  t4
       /  \                  /  \
-     B    C                A    B
+     t2    t3              t1   t2
 
 */
 /*
  Return which the root pointer should point to
  */
-AVL* LR_Rotate(AVL* k3)
+AVL* LR_Rotate(AVL* X)
 {
-	k3->lchild = LL_Rotate(k3->lchild);
-	return RR_Rotate(k3);
+	X->lchild = RR_Rotate(X->lchild);
+	return LL_Rotate(X);
 }
 
 
-/* RL(D rotates to the right, then C rotates to the left):
+/* RL(t3 rotates to the right, then t2 rotates to the left):
 
-       k3                         k3                          k2
+       X                          X                           Y
       /  \                       /  \                        /  \
-     A    k1                    A    k2                     k3   k1 
+     t1    Z                    t1    Y                     X    Z 
          /  \       ==>             /  \         ==>       /  \  / \
-        k2   B                     C    k1                A   C D   B
+        Y   t4                     t2    Z                t1  t2 t3  t4
        /  \                            /  \
-      C    D                          D    B 
+      t2   t3                         t3   t4 
 
  */
-AVL* RL_Rotate(AVL* k3)
+AVL* RL_Rotate(AVL* X)
 {
-	k3->rchild = RR_Rotate(k3->rchild);
-	return LL_Rotate(k3);
+	X->rchild = LL_Rotate(X->rchild);
+	return RR_Rotate(X);
 }
 
 /* return which the root pointer(at an outer/higher level) should point to,
@@ -120,17 +125,17 @@ AVL* Insert(AVL* root, KEY_TYPE key)
 	root->height = max(getHeight(root->lchild), getHeight(root->rchild)) + 1;
 	if(getHeight(root->lchild) - getHeight(root->rchild) == 2)
 	{
-		if(key < root->lchild->key)
-			root = RR_Rotate(root);
-		else
+		if(key < root->lchild->key)     // Left Left
+			root = LL_Rotate(root);
+		else                            // Left Right
 			root = LR_Rotate(root);
 	}
 	else if(getHeight(root->rchild) - getHeight(root->lchild) == 2)
 	{
-		if(key < root->rchild->key)
+		if(key < root->rchild->key)     // Right Left
 			root = RL_Rotate(root);
-		else
-			root = LL_Rotate(root);
+		else                            // Right Right
+			root = RR_Rotate(root);
 	}
 	return root;
 }
@@ -173,16 +178,16 @@ AVL* Delete(AVL* root, KEY_TYPE key)
 	if(getHeight(root->rchild) - getHeight(root->lchild) == 2)
 	{
 		if(getHeight(root->rchild->rchild) >= getHeight(root->rchild->lchild))
-			root = LL_Rotate(root);
+			root = RR_Rotate(root);
 		else
-			root = RL_Rotate(root);
+			root = LR_Rotate(root);
 	}
 	else if(getHeight(root->lchild) - getHeight(root->rchild) == 2)
 	{
 		if(getHeight(root->lchild->lchild) >= getHeight(root->lchild->rchild))
-			root = RR_Rotate(root);
+			root = LL_Rotate(root);
 		else
-			root = LR_Rotate(root);
+			root = RL_Rotate(root);
 	}
 	return root;
 }
@@ -200,4 +205,76 @@ void InOrder(AVL* root)
 		printf("\n");
 		InOrder(root->rchild);
 	}
+}
+
+// Convert an integer to string
+string intToString(int val) {
+    ostringstream ss;
+    ss << val;
+    return ss.str();
+}
+
+// Print the arm branches (eg, / \ ) on a line
+void printBranches(int branchLen, int nodeSpaceLen, int startLen, int nodesInThisLevel, const deque<AVL*>& nodesQueue) {
+    deque<AVL*>::const_iterator iter = nodesQueue.begin();
+    for (int i = 0; i < nodesInThisLevel / 2; i++) {
+        cout << ((i == 0) ? setw(startLen - 1) : setw(nodeSpaceLen - 2)) << "" << ((*iter++) ? "/" : " ");
+        cout << setw(2 * branchLen + 2) << "" << ((*iter++) ? "\\" : " ");
+    }
+    cout << endl;
+}
+
+// Print the branches and node (eg, ___10___ )
+void printNodes(int branchLen, int nodeSpaceLen, int startLen, int nodesInThisLevel, const deque<AVL*>& nodesQueue) {
+    deque<AVL*>::const_iterator iter = nodesQueue.begin();
+    for (int i = 0; i < nodesInThisLevel; i++, iter++) {
+        cout << ((i == 0) ? setw(startLen) :setw(nodeSpaceLen)) << "" << ((*iter && (*iter)->lchild) ? setfill('_') : setfill(' '));
+        cout << setw(branchLen + 2) << ((*iter) ? intToString((*iter)->key) : "");
+        cout << ((*iter && (*iter)->rchild) ? setfill('_') : setfill(' ')) << setw(branchLen) << "" << setfill(' ');
+    }
+    cout << endl;
+}
+
+// Print the leaves only (just for the bottom row)
+void printLeaves(int indentSpace, int level, int nodesInThisLevel, const deque<AVL*>& nodesQueue) {
+    deque<AVL*>::const_iterator iter = nodesQueue.begin();
+    for (int i = 0; i < nodesInThisLevel; i++, iter++) {
+        cout << ((i == 0) ? setw(indentSpace + 2) : setw(2 * level + 2)) << ((*iter) ? intToString((*iter)->key) : "");
+    }
+    cout << endl;
+}
+
+void printBST(AVL* root, int level, int indentSpace) {
+    int h = root->height + 1;
+    int nodesInThisLevel = 1;
+
+    int branchLen = 2 * ((int)pow(2.0, h) -1 ) - (3 - level) * (int)pow(2.0, h-1);   // eq of the length of branch for each node of each level
+    int nodeSpaceLen = 2 + (level + 1) * (int)pow(2.0, h);  // distance between left neighbor node's right arm and right neighbor node's left arm
+    int startLen = branchLen + (3-level) + indentSpace;     // starting space to the first node to print of each level (for the left most node of each level only)
+
+    deque<AVL*> nodesQueue;
+    nodesQueue.push_back(root);
+    for (int r = 1; r < h; r++) {
+        printBranches(branchLen, nodeSpaceLen, startLen, nodesInThisLevel, nodesQueue);
+        branchLen = branchLen / 2 - 1;
+        nodeSpaceLen = nodeSpaceLen / 2 + 1;
+        startLen = branchLen + (3 - level) + indentSpace;
+        printNodes(branchLen, nodeSpaceLen, startLen, nodesInThisLevel, nodesQueue);
+
+        for (int i = 0; i < nodesInThisLevel; i++) {
+            AVL *currNode = nodesQueue.front();
+            nodesQueue.pop_front();
+            if (currNode) {
+                nodesQueue.push_back(currNode->lchild);
+                nodesQueue.push_back(currNode->rchild);
+            } else {
+                nodesQueue.push_back(NULL);
+                nodesQueue.push_back(NULL);
+            }
+        }
+
+        nodesInThisLevel *= 2;
+    }
+    printBranches(branchLen, nodeSpaceLen, startLen, nodesInThisLevel, nodesQueue);
+    printLeaves(indentSpace, level, nodesInThisLevel, nodesQueue);
 }
